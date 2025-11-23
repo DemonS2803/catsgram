@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
@@ -26,11 +27,15 @@ public class PostService {
         return posts.values();
     }
 
+    public Optional<Post> findById(long id) {
+        return Optional.ofNullable(posts.get(id));
+    }
+
     public Post create(Post post) {
         if (post.getDescription() == null || post.getDescription().isBlank()) {
             throw new ConditionsNotMetException("Описание не может быть пустым");
         }
-        if (userService.findUserById(post.getAuthorId()).isPresent()) {
+        if (!userService.findUserById(post.getAuthorId()).isPresent()) {
             throw new ConditionsNotMetException("Автор с id = " + post.getAuthorId() + " не найден");
         }
         post.setId(getNextId());

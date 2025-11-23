@@ -1,9 +1,11 @@
 package ru.yandex.practicum.catsgram.controller;
 
 import java.util.Collection;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -27,6 +29,11 @@ public class UserController {
     @GetMapping
     public Collection<User> findAll() {
         return userService.findAll();
+    }
+
+    @GetMapping("/{userId}")
+    public Optional<User> findById(@PathVariable long userId) {
+        return userService.findUserById(userId);
     }
 
     @PostMapping
