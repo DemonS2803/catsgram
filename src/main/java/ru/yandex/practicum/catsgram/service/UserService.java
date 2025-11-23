@@ -68,8 +68,8 @@ public class UserService {
         return savedUser.isPresent();
     }
 
-    public boolean isUserExists(long id) {
-        return users.containsKey(id);
+    public Optional<User> findUserById(long id) {
+        return Optional.of(users.get(id));
     }
 
     private long getNextId() {
