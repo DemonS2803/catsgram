@@ -1,8 +1,11 @@
 package ru.yandex.practicum.catsgram.service;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,6 +28,26 @@ public class PostService {
 
     public Collection<Post> findAll() {
         return posts.values();
+    }
+
+    public Collection<Post> findAll(int from, int size, boolean isAsc) {
+        List<Post> tmpPosts = new ArrayList<>(posts.values());
+        Comparator<Post> cmp = Comparator.comparing(Post::getPostDate);
+        if (!isAsc) {
+            cmp = cmp.reversed();
+        }
+        tmpPosts = tmpPosts.stream().sorted(cmp).toList();
+        return tmpPosts.subList(
+                Math.min(tmpPosts.size(), from),
+                Math.min(tmpPosts.size(), from + size)
+        );
+    }
+
+    public Collection<Post> findLatest(int size) {
+        long maxId = posts.keySet().stream()
+                .mapToLong(Long::longValue)
+                .max().orElse(0);
+        return findAll((int) Math.max(0, maxId - size), (int) maxId, true);
     }
 
     public Optional<Post> findById(long id) {

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import ru.yandex.practicum.catsgram.model.Post;
@@ -25,8 +26,27 @@ public class PostController {
     }
 
     @GetMapping
-    public Collection<Post> findAll() {
-        return postService.findAll();
+    public Collection<Post> findAll(
+            @RequestParam(value = "from") Optional<Integer> from,
+            @RequestParam(value = "size") Optional<Integer> size,
+            @RequestParam(value = "sort") Optional<String> sort
+    ) {
+        boolean isAsc = true;
+        // Вот если бы не это условие,
+        // то можно было бы по красоте сделать через дефолты
+        if (from.isEmpty() && size.isEmpty() && sort.isEmpty()) {
+            return postService.findLatest(10);
+        }
+        if (from.isEmpty()) {
+            from = Optional.of(0);
+        }
+        if (size.isEmpty()) {
+            size = Optional.of(10);
+        }
+        if (sort.isPresent() && !sort.get().equals("asc")) {
+            isAsc = false;
+        }
+        return postService.findAll(from.get(), size.get(), isAsc);
     }
 
     @GetMapping("/{postId}")
