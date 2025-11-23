@@ -68,6 +68,10 @@ public class UserService {
         return savedUser.isPresent();
     }
 
+    public boolean isUserExists(long id) {
+        return users.containsKey(id);
+    }
+
     private long getNextId() {
         long currentMaxId = users.keySet()
                 .stream()

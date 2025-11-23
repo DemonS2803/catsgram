@@ -13,7 +13,14 @@ import ru.yandex.practicum.catsgram.model.Post;
 
 @Service
 public class PostService {
+
+    private final UserService userService;
+
     private final Map<Long, Post> posts = new HashMap<>();
+
+    public PostService(UserService userService) {
+        this.userService = userService;
+    }
 
     public Collection<Post> findAll() {
         return posts.values();
@@ -23,7 +30,9 @@ public class PostService {
         if (post.getDescription() == null || post.getDescription().isBlank()) {
             throw new ConditionsNotMetException("Описание не может быть пустым");
         }
-
+        if (!userService.isUserExists(post.getAuthorId())) {
+            throw new ConditionsNotMetException("Указанного автора не существует");
+        }
         post.setId(getNextId());
         post.setPostDate(Instant.now());
         posts.put(post.getId(), post);
