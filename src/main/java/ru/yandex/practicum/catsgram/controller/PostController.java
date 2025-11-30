@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import ru.yandex.practicum.catsgram.exception.ParameterNotValidException;
 import ru.yandex.practicum.catsgram.model.Post;
 import ru.yandex.practicum.catsgram.service.PostService;
 
@@ -47,6 +48,15 @@ public class PostController {
         }
         if (sort.isPresent() && !sort.get().equals("asc")) {
             isAsc = false;
+        }
+        if (!sort.get().equals("asc") || !sort.get().equals("desc")) {
+            throw new ParameterNotValidException("sort", "Некорректный тип сортировки. Разрешено только asc or desc");
+        }
+        if (size.get() <= 0) {
+            throw new ParameterNotValidException("size", "Некорректный размер выборки. Размер должен быть больше нуля");
+        }
+        if (from.get() < 0) {
+            throw new ParameterNotValidException("from", "Некорректная стартовая позиция. Позиция должен быть неотрицательной");
         }
         return postService.findAll(from.get(), size.get(), isAsc);
     }
