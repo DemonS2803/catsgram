@@ -1,65 +1,80 @@
 package ru.yandex.practicum.catsgram.controller;
 
-import java.time.Instant;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-import ru.yandex.practicum.catsgram.exception.ConditionsNotMetException;
-import ru.yandex.practicum.catsgram.exception.NotFoundException;
+import ru.yandex.practicum.catsgram.exception.ParameterNotValidException;
 import ru.yandex.practicum.catsgram.model.Post;
+import ru.yandex.practicum.catsgram.service.PostService;
 
 @RestController
 @RequestMapping("/posts")
 public class PostController {
 
-    private final Map<Long, Post> posts = new HashMap<>();
+    private final PostService postService;
+
+    public PostController(PostService postService) {
+        this.postService = postService;
+    }
 
     @GetMapping
-    public Collection<Post> findAll() {
-        return posts.values();
+    public Collection<Post> findAll(
+            @RequestParam(value = "from") Optional<Integer> from,
+            @RequestParam(value = "size") Optional<Integer> size,
+            @RequestParam(value = "sort") Optional<String> sort
+    ) {
+        boolean isAsc = true;
+        // Вот если бы не это условие,
+        // то можно было бы по красоте сделать через дефолты
+        if (from.isEmpty() && size.isEmpty() && sort.isEmpty()) {
+            return postService.findLatest(10);
+        }
+        if (from.isEmpty()) {
+            from = Optional.of(0);
+        }
+        if (size.isEmpty()) {
+            size = Optional.of(10);
+        }
+        if (sort.isPresent() && !sort.get().equals("asc")) {
+            isAsc = false;
+        }
+        if (!sort.get().equals("asc") || !sort.get().equals("desc")) {
+            throw new ParameterNotValidException("sort", "Некорректный тип сортировки. Разрешено только asc or desc");
+        }
+        if (size.get() <= 0) {
+            throw new ParameterNotValidException("size", "Некорректный размер выборки. Размер должен быть больше нуля");
+        }
+        if (from.get() < 0) {
+            throw new ParameterNotValidException("from", "Некорректная стартовая позиция. Позиция должен быть неотрицательной");
+        }
+        return postService.findAll(from.get(), size.get(), isAsc);
+    }
+
+    @GetMapping("/{postId}")
+    public Optional<Post> findById(@PathVariable long postId) {
+        return postService.findById(postId);
     }
 
     @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Post create(@RequestBody Post post) {
-        if (post.getDescription() == null || post.getDescription().isBlank()) {
-            throw new ConditionsNotMetException("Описание не может быть пустым");
-        }
-        post.setId(getNextId());
-        post.setPostDate(Instant.now());
-        posts.put(post.getId(), post);
-        return post;
+        return postService.create(post);
     }
 
     @PutMapping
+    @ResponseStatus(HttpStatus.CREATED)
     public Post update(@RequestBody Post newPost) {
-        if (newPost.getId() == null) {
-            throw new ConditionsNotMetException("Id должен быть указан");
-        }
-        if (posts.containsKey(newPost.getId())) {
-            Post oldPost = posts.get(newPost.getId());
-            if (newPost.getDescription() == null || newPost.getDescription().isBlank()) {
-                throw new ConditionsNotMetException("Описание не может быть пустым");
-            }
-            oldPost.setDescription(newPost.getDescription());
-            return oldPost;
-        }
-        throw new NotFoundException("Пост с id = " + newPost.getId() + " не найден");
-    }
-
-    private long getNextId() {
-        long currentMaxId = posts.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
+        return postService.update(newPost);
     }
 }
