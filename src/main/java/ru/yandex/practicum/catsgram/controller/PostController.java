@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import ru.yandex.practicum.catsgram.dto.NewPostRequest;
+import ru.yandex.practicum.catsgram.dto.PostDto;
+import ru.yandex.practicum.catsgram.dto.UpdatePostRequest;
 import ru.yandex.practicum.catsgram.exception.ParameterNotValidException;
-import ru.yandex.practicum.catsgram.model.Post;
 import ru.yandex.practicum.catsgram.service.PostService;
 
 @RestController
@@ -29,7 +31,7 @@ public class PostController {
     }
 
     @GetMapping
-    public Collection<Post> findAll(
+    public Collection<PostDto> findAll(
             @RequestParam(value = "from") Optional<Integer> from,
             @RequestParam(value = "size") Optional<Integer> size,
             @RequestParam(value = "sort") Optional<String> sort
@@ -62,19 +64,19 @@ public class PostController {
     }
 
     @GetMapping("/{postId}")
-    public Optional<Post> findById(@PathVariable long postId) {
+    public PostDto findById(@PathVariable long postId) {
         return postService.findById(postId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public Post create(@RequestBody Post post) {
-        return postService.create(post);
+    public PostDto create(@RequestBody NewPostRequest request) {
+        return postService.createPost(request);
     }
 
-    @PutMapping
+    @PutMapping("/{postId}")
     @ResponseStatus(HttpStatus.CREATED)
-    public Post update(@RequestBody Post newPost) {
-        return postService.update(newPost);
+    public PostDto update(@PathVariable Long postId, @RequestBody UpdatePostRequest request) {
+        return postService.updatePost(postId, request);
     }
 }

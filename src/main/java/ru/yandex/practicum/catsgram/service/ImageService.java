@@ -6,9 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -16,9 +14,12 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import lombok.RequiredArgsConstructor;
-import ru.yandex.practicum.catsgram.exception.ConditionsNotMetException;
+import ru.yandex.practicum.catsgram.dal.ImageRepository;
+import ru.yandex.practicum.catsgram.dal.PostRepository;
+import ru.yandex.practicum.catsgram.dto.ImageDto;
 import ru.yandex.practicum.catsgram.exception.ImageFileException;
 import ru.yandex.practicum.catsgram.exception.NotFoundException;
+import ru.yandex.practicum.catsgram.mapper.ImageMapper;
 import ru.yandex.practicum.catsgram.model.Image;
 import ru.yandex.practicum.catsgram.model.ImageData;
 import ru.yandex.practicum.catsgram.model.Post;
@@ -27,49 +28,41 @@ import ru.yandex.practicum.catsgram.model.Post;
 @RequiredArgsConstructor
 public class ImageService {
 
-    private final PostService postService;
+    private final PostRepository postRepository;
+    private final ImageRepository imageRepository;
 
     private final String imageDirectory = "images";
 
-    private final Map<Long, Image> images = new HashMap<>();
-
-    public List<Image> getPostImages(long postId) {
-        return images.values()
-                .stream()
-                .filter(image -> image.getPostId() == postId)
+    public List<ImageDto> getPostImages(long postId) {
+        return imageRepository.findByPostId(postId).stream()
+                .map(ImageMapper::mapToImageDto)
                 .collect(Collectors.toList());
     }
 
-    public List<Image> saveImages(Long postId, List<MultipartFile> images) {
-        List<Image> savedImagesList = new ArrayList<>();
+    public List<ImageDto> saveImages(Long postId, List<MultipartFile> images) {
+        List<ImageDto> savedImagesList = new ArrayList<>();
         images.forEach(image -> {
-            Image saved = saveImage(postId, image);
+            ImageDto saved = saveImage(postId, image);
             savedImagesList.add(saved);
         });
         return savedImagesList;
     }
 
-    private Image saveImage(long postId, MultipartFile file) {
-        Post post = postService.findById(postId)
-                .orElseThrow(() -> new ConditionsNotMetException("Указанный пост не найден"));
+    private ImageDto saveImage(long postId, MultipartFile file) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new NotFoundException("Указанный пост не найден"));
 
         // сохраняем изображение на диск и возвращаем путь к файлу
         Path filePath = saveFile(file, post);
 
-        // создаём объект для хранения данных изображения
-        long imageId = getNextId();
+        Image image = new Image();
+        image.setPostId(postId);
+        image.setOriginalFileName(file.getOriginalFilename());
+        image.setFilePath(filePath.toString());
 
-        // создание объекта изображения и заполнение его данными
-        Image image = Image.builder()
-                .id(imageId)
-                .filePath(filePath.toString())
-                .originalFileName(file.getOriginalFilename())
-                .postId(postId)
-                .build();
+        image = imageRepository.save(image);
 
-        images.put(imageId, image);
-
-        return image;
+        return ImageMapper.mapToImageDto(image);
     }
 
     private Path saveFile(MultipartFile file, Post post) {
@@ -96,10 +89,8 @@ public class ImageService {
     }
 
     public ImageData getImageData(long imageId) {
-        if (!images.containsKey(imageId)) {
-            throw new NotFoundException("Изображение с id = " + imageId + " не найдено");
-        }
-        Image image = images.get(imageId);
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new NotFoundException("Указанное изображение не найдено"));
         // загрузка файла с диска
         byte[] data = loadFile(image);
 
@@ -121,12 +112,4 @@ public class ImageService {
         }
     }
 
-    private long getNextId() {
-        long currentMaxId = images.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
-    }
 }
